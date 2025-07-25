@@ -9,13 +9,25 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.2",
+    "lucide-react": "^0.513.0",
+    "mongodb": "^6.17.0",
+    "mongoose": "^8.15.1",
+    "next": "15.1.6",
+    "next-auth": "^4.24.11",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "next": "15.3.1"
+    "react-hot-toast": "^2.5.2",
+    "react-icons": "^5.5.0",
+    "swiper": "^11.2.6"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3",
     "eslint": "^9",
-    "eslint-config-next": "15.3.1",
-    "@eslint/eslintrc": "^3"
+    "eslint-config-next": "15.1.6",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1"
   }
 }
