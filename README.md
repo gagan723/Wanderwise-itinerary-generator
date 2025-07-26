@@ -1,36 +1,114 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# 🌍 WanderWise – AI-Powered Travel Itinerary Generator
 
-## Getting Started
+WanderWise is a full-stack web application that generates personalized travel itineraries using Google's Gemini AI. Users can input travel details like destination, dates, preferences, and budget, and instantly receive structured, day-by-day plans with recommendations on attractions, accommodations, and more.
 
-First, run the development server:
+> ✨ Built with Next.js 13 (App Router), Google Gemini API, and MongoDB.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+## 🚀 Deployed link
+- https://wanderwise-itinerary-generator.vercel.app
+
+
+
+## 🚀 Features
+
+- 🔮 **AI-Generated Itineraries**: Personalized day-wise travel plans using Gemini.
+- 💬 **Interactive Chat**: Smart Q&A to refine your trip details.
+- 👤 **Authentication**: Google login and email/password with NextAuth.js.
+
+---
+
+## 🛠️ Tech Stack
+
+| Tech               | Description                               |
+|--------------------|-------------------------------------------|
+| **Next.js 13**      | App Router, SSR, API Routes               |
+| **Tailwind CSS**    | Modern utility-first styling              |
+| **MongoDB**         | Itinerary and user data storage           |
+| **NextAuth.js**     | Authentication (Google + Email/Password) |
+| **Gemini API**      | AI itinerary generation                  |
+| **Vercel**          | Deployment                                |
+
+
+✨ Features
+- 💬 **Interactive Chat Interface**  
+  A user-friendly chat window to communicate your travel desires.
+
+- 🧠 **AI-Powered Information Gathering**  
+  Intelligently extracts critical trip details (destination, dates, travelers) from your natural language input.
+
+- 🧩 **Contextual Understanding**  
+  Remembers previous conversation turns to build a comprehensive understanding of your trip requirements.
+
+- 📅 **Dynamic Itinerary Generation**  
+  Once all necessary details are collected, Gemini AI generates a structured, day-by-day itinerary.
+
+- 🗺️ **Multi-City Support**  
+  Capable of generating itineraries that span multiple cities within a single trip.
+
+- 🖥️📱 **Responsive Design**  
+  Optimized for a seamless experience on both desktop and mobile devices.
+
+- 🗓️ **Detailed Itinerary View**  
+  Presents accommodations, attractions, and daily descriptions in a clear, organized timeline.
+
+---
+
+⚙️ Setup and Local Development
+Follow these steps to get WanderWise running on your local machine.
+
+Prerequisites
+Node.js (v18 or higher recommended)
+
+npm or Yarn
+
+A Google Cloud Project with the Gemini API enabled.
+
+A Google Generative AI API Key.
+
+### 1. Clone the Repository
+ ```bash
+  git clone https://github.com/gagan723/BakeNBrew-cafe-website.git
+
 ```
+### 2. Install Dependencies on both frontend and backend
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+ ```bash
+  npm install
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+```
+### 3. Create .env file in backend and add
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+ ```bash
+  MONGO_URI=your_mongodb_connection_string
+  ACCESS_TOKEN_SECRET=your_jwt_secret
+  CLOUDINARY_CLOUD_NAME=your_cloud_name
+  CLOUDINARY_API_KEY=your_api_key
+  CLOUDINARY_API_SECRET=your_api_secret
 
-## Learn More
+```
+### 4. Then run backend and frontend server
 
-To learn more about Next.js, take a look at the following resources:
+ ```bash
+  cd backend
+  npm start
+  cd frontend
+  npm start
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Open http://localhost:3000 (or the port indicated in your terminal) in your browser to see the application.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
+## Usage
 
-## Deploy on Vercel
+Start Chatting: Begin by typing your travel preferences into the chat input. For example:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+"Plan a solo adventure trip to Bali in August 2025, mid-range budget."
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+"I want to visit Kyoto, Japan with 2 adults for 5 days in April 2026, interested in culture and food."
+
+Provide Details: The AI assistant will ask clarifying questions if it needs more information (e.g., specific dates, number of travelers).
+
+Itinerary Generation: Once all critical details are gathered, the assistant will indicate "Ready to generate itinerary!" and then proceed to generate a detailed plan.
+
+View Itinerary: The generated itinerary will appear in the right-hand panel, organized by day, showing accommodations, attractions, and a detailed description for each day.
+
