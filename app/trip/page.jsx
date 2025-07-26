@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Send, MapPin, Calendar, Users, DollarSign, Plane, Hotel } from 'lucide-react';
 
 
-// ChatInput Component
+// ChatInput Component (No changes needed here)
 const ChatInput = ({ onSendMessage, isLoading }) => {
   const [message, setMessage] = useState('');
 
@@ -44,7 +44,7 @@ const ChatInput = ({ onSendMessage, isLoading }) => {
   );
 };
 
-// ChatMessages Component
+// ChatMessages Component 
 const ChatMessages = ({ messages, isLoading }) => {
   return (
     <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -55,11 +55,11 @@ const ChatMessages = ({ messages, isLoading }) => {
           </div>
           <h3 className="text-lg font-medium mb-2">Start Planning Your Trip</h3>
           <div>
-  <p>🧳 Let’s craft an unforgettable journey. Please share the following details: destination, travel dates, number of travelers, travel style, and budget.</p>
-</div>       
- </div>
+            <p>🧳 Let’s craft an unforgettable journey. Please share the following details: destination, travel dates, number of travelers, travel style, and budget.</p>
+          </div>
+        </div>
       )}
-      
+
       {messages.map((message, index) => (
         <div
           key={index}
@@ -79,7 +79,7 @@ const ChatMessages = ({ messages, isLoading }) => {
           </div>
         </div>
       ))}
-      
+
       {isLoading && (
         <div className="flex justify-start">
           <div className="bg-gray-100 rounded-lg px-4 py-2 max-w-[80%]">
@@ -94,7 +94,7 @@ const ChatMessages = ({ messages, isLoading }) => {
   );
 };
 
-// ItineraryCard Component
+// ItineraryCard Component (No changes needed here)
 const ItineraryCard = ({ day, isLast }) => {
   if (!day) return null;
 
@@ -104,13 +104,13 @@ const ItineraryCard = ({ day, isLast }) => {
       {!isLast && (
         <div className="absolute left-6 top-16 w-0.5 h-full bg-gradient-to-b from-blue-300 to-gray-200"></div>
       )}
-      
+
       <div className="flex items-start gap-4">
         {/* Day number circle */}
         <div className="flex-shrink-0 w-12 h-12 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-sm z-10">
           {day.day}
         </div>
-        
+
         {/* Day content */}
         <div className="flex-1 bg-white rounded-lg shadow-sm border p-6">
           <div className="mb-3">
@@ -120,9 +120,9 @@ const ItineraryCard = ({ day, isLast }) => {
             </div>
             <h3 className="text-lg font-semibold text-gray-900">{day.title}</h3>
           </div>
-          
+
           <p className="text-gray-700 mb-4 leading-relaxed">{day.description}</p>
-          
+
           {/* Accommodations */}
           {day.accommodations && day.accommodations.length > 0 && (
             <div className="mb-3">
@@ -139,7 +139,7 @@ const ItineraryCard = ({ day, isLast }) => {
               </div>
             </div>
           )}
-          
+
           {/* Attractions */}
           {day.attractions && day.attractions.length > 0 && (
             <div>
@@ -162,7 +162,7 @@ const ItineraryCard = ({ day, isLast }) => {
   );
 };
 
-// ItineraryLayout Component
+// ItineraryLayout Component - MODIFIED TO DISPLAY ALL DAYS
 const ItineraryLayout = ({ itinerary }) => {
   if (!itinerary) {
     return (
@@ -176,7 +176,15 @@ const ItineraryLayout = ({ itinerary }) => {
     );
   }
 
-  const location = itinerary.locations[0]; // Assuming single location for now
+  // Flatten all itinerary days from all locations into a single array, sorted by day number
+  const allDays = itinerary.locations.flatMap(location => location.itinerary)
+    .sort((a, b) => a.day - b.day);
+
+  // Determine the primary city for the header (e.g., the first city, or just "Multiple Locations")
+  const primaryCity = itinerary.locations.length > 0
+    ? itinerary.locations[0].city + (itinerary.locations.length > 1 ? " & more" : "")
+    : "Unknown Location";
+
 
   return (
     <div className="h-full overflow-y-auto">
@@ -190,7 +198,7 @@ const ItineraryLayout = ({ itinerary }) => {
           </div>
           <div className="flex items-center gap-1">
             <MapPin size={16} />
-            {location.city}
+            {primaryCity} {/* Display the primary city or "Multiple Locations" */}
           </div>
         </div>
       </div>
@@ -198,11 +206,11 @@ const ItineraryLayout = ({ itinerary }) => {
       {/* Itinerary Timeline */}
       <div className="p-6">
         <div className="space-y-0">
-          {location.itinerary.map((day, index) => (
-            <ItineraryCard 
-              key={day.day} 
-              day={day} 
-              isLast={index === location.itinerary.length - 1}
+          {allDays.map((day, index) => (
+            <ItineraryCard
+              key={day.day} // Use day.day as key, assuming it's unique and sequential
+              day={day}
+              isLast={index === allDays.length - 1} // Calculate isLast based on the flattened array
             />
           ))}
         </div>
@@ -211,11 +219,12 @@ const ItineraryLayout = ({ itinerary }) => {
   );
 };
 
-// Main Page Component
+// Main Page Component (No changes needed here, as the ItineraryLayout handles the display)
 const TripPlannerPage = () => {
   const [messages, setMessages] = useState([]);
   const [itinerary, setItinerary] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [conversationContext, setConversationContext] = useState({});
 
   const handleSendMessage = async (message) => {
     const userMessage = {
@@ -223,51 +232,57 @@ const TripPlannerPage = () => {
       content: message,
       timestamp: new Date().toISOString()
     };
-    
+
     setMessages(prev => [...prev, userMessage]);
     setIsLoading(true);
 
     try {
-      // First, send message for info gathering
+      // --- Step 1: Send message for info gathering ---
       const infoResponse = await fetch('/api/gemini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userMessage: message,
-          type: 'info',
-          context: {}
+          type: 'info', // Always send 'info' type for the initial chat message
+          context: conversationContext // Pass the accumulated context
         })
       });
 
-      const infoData = await infoResponse.json();
-      
+      const infoData = await infoResponse.json(); // This is the response from the 'info' model
+
+      // Update the conversation context with the latest collected details
+      if (infoData.collected_details && typeof infoData.collected_details === 'object') {
+          setConversationContext(infoData.collected_details);
+      }
+
+      // Display the AI's status message (e.g., asking for more info or "Ready...")
       const assistantMessage = {
         role: 'assistant',
-        content: infoData.reply,
+        content: infoData.status_message, // Display the message from the info model
         timestamp: new Date().toISOString()
       };
-      
+
       setMessages(prev => [...prev, assistantMessage]);
 
-      // Check if ready to generate itinerary
-      if (infoData.reply.includes("Ready to generate itinerary")) {
-        // Extract trip details from conversation context
-        const tripContext = infoData.reply
+      // --- Step 2: Check if ready to generate itinerary and make a *second* API call ---
+      if (infoData.status_message === "Ready to generate itinerary!") {
+        setIsLoading(true); // Trigger loading state again for the itinerary generation
 
-        // Generate itinerary
         const itineraryResponse = await fetch('/api/gemini', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userMessage: message,
-            type: 'itinerary',
-            context: tripContext
+            userMessage: "Generate the itinerary now.", // A simple trigger message for the itinerary model
+            type: 'itinerary', // This explicitly tells the backend to generate itinerary
+            context: infoData.collected_details // Pass the *complete* collected details
           })
         });
 
-        const itineraryData = await itineraryResponse.json();
-        setItinerary(itineraryData.reply);
+        const itineraryData = await itineraryResponse.json(); // This is the full itinerary JSON
+
+        setItinerary(itineraryData); // Set the itinerary
       }
+
     } catch (error) {
       console.error('Error:', error);
       const errorMessage = {
@@ -289,7 +304,7 @@ const TripPlannerPage = () => {
           <h2 className="text-xl font-semibold text-gray-900">Trip Planning Assistant</h2>
           <p className="text-sm text-gray-600">Let's plan your perfect trip together!</p>
         </div>
-        
+
         <ChatMessages messages={messages} isLoading={isLoading} />
         <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading} />
       </div>
