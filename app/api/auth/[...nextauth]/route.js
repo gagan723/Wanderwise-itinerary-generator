@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 
-const handler = NextAuth({
+export const authOptions = {
   session: {
     strategy: "jwt",
   },
@@ -59,6 +59,8 @@ const handler = NextAuth({
       if (user) {
         token.id = user.id;
         token.email = user.email;
+        token.name = user.name;
+        token.picture = user.image;
       }
       return token;
     },
@@ -77,6 +79,8 @@ const handler = NextAuth({
     signIn: "/auth/sign-in",
   },
   secret: process.env.NEXTAUTH_SECRET,
-});
+};
+
+const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };

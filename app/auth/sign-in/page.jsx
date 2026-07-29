@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 import { FcGoogle } from "react-icons/fc";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 
-const Login = () => {
+const LoginForm = () => {
   const [data, setData] = useState({
     email: "",
     password: "",
@@ -17,6 +18,8 @@ const Login = () => {
   const [isChecked, setIsChecked] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -45,10 +48,12 @@ const Login = () => {
         redirect: false,
         email,
         password,
+        callbackUrl,
       });
 
       if (res?.ok) {
-        router.push("/");
+        router.push(res.url || callbackUrl);
+        router.refresh();
         toast.success("Login successful!");
       } else if (res?.status === 401) {
         setError("Invalid credentials");
@@ -65,7 +70,7 @@ const Login = () => {
 
   const handleGoogleSignIn = (e) => {
     e.preventDefault();
-    signIn("google", { callbackUrl: "/" });
+    signIn("google", { callbackUrl });
   };
 
   const handleClose = () => {
@@ -178,7 +183,7 @@ const Login = () => {
           </div>
 
           <p className="mt-4 text-center text-sm text-gray-600">
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <span
               onClick={() => router.push("/auth/sign-up")}
               className="text-blue-600 hover:underline cursor-pointer"
@@ -191,5 +196,11 @@ const Login = () => {
     </div>
   );
 };
+
+const Login = () => (
+  <Suspense fallback={null}>
+    <LoginForm />
+  </Suspense>
+);
 
 export default Login;

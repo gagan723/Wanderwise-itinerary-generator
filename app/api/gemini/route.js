@@ -1,9 +1,20 @@
 // app/api/gemini/route.js
 
 import { askGemini } from '@/lib/gemini'; // Adjust this path if necessary based on your folder structure
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 
 export async function POST(request) {
   try {
+    const session = await getServerSession(authOptions);
+
+    if (!session) {
+      return new Response(JSON.stringify({ error: 'Authentication required.' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     const { userMessage, type, context } = await request.json();
 
     if (!userMessage || !type) {

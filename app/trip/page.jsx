@@ -302,7 +302,7 @@ const TripPlannerPage = () => {
       <div className="w-1/2 flex flex-col bg-white border-r border-gray-200">
         <div className="bg-white border-b border-gray-200 p-4">
           <h2 className="text-xl font-semibold text-gray-900">Trip Planning Assistant</h2>
-          <p className="text-sm text-gray-600">Let's plan your perfect trip together!</p>
+          <p className="text-sm text-gray-600">Let&apos;s plan your perfect trip together!</p>
         </div>
 
         <ChatMessages messages={messages} isLoading={isLoading} />
