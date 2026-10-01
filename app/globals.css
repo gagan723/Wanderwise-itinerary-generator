@@ -15,6 +15,30 @@ body {
   background-color: white;
 }
 
+.wanderwise-map-marker {
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid white;
+  border-radius: 9999px;
+  background: #2563eb;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgb(15 23 42 / 0.28);
+  cursor: pointer;
+}
+
+.wanderwise-google-popup {
+  display: grid;
+  gap: 0.2rem;
+  color: #0f172a;
+}
+
+.wanderwise-google-popup span {
+  color: #64748b;
+  font-size: 0.75rem;
+}
+
 ::-webkit-scrollbar {
 	width: 9px;
 	height: 9px;
