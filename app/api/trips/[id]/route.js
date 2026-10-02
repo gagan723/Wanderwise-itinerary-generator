@@ -1,89 +1,37 @@
-import mongoose from "mongoose";
-import { NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/currentUser";
 import Trip from "@/models/trip";
+import { ownedTripQuery, newShareToken } from "@/lib/tripAccess";
+import { apiHandler, ApiError, json, readJson } from "@/lib/api";
+import { persistableItinerary, updateTripSchema } from "@/lib/schemas";
+import { rateLimit } from "@/lib/rateLimit";
 
-async function ownedTripQuery(id) {
-  const user = await getCurrentUser();
-  if (!user) return { unauthorized: true };
-  if (!mongoose.isValidObjectId(id)) return { user, invalid: true };
-  return { user, query: { _id: id, owner: user._id } };
+function ownerView(trip) {
+  const { shareTokenHash, ...safe } = trip;
+  return { ...safe, itinerary: persistableItinerary(safe.itinerary), sharingEnabled: Boolean(shareTokenHash) };
 }
-
-export async function GET(_request, { params }) {
-  try {
-    const { id } = await params;
-    const access = await ownedTripQuery(id);
-    if (access.unauthorized) {
-      return NextResponse.json({ error: "Authentication required." }, { status: 401 });
-    }
-    if (access.invalid) {
-      return NextResponse.json({ error: "Trip not found." }, { status: 404 });
-    }
-
-    const trip = await Trip.findOne(access.query).lean();
-    if (!trip) return NextResponse.json({ error: "Trip not found." }, { status: 404 });
-    return NextResponse.json({ trip });
-  } catch (error) {
-    console.error("Get trip error:", error);
-    return NextResponse.json({ error: "Unable to load trip." }, { status: 500 });
-  }
-}
-
-export async function PATCH(request, { params }) {
-  try {
-    const { id } = await params;
-    const access = await ownedTripQuery(id);
-    if (access.unauthorized) {
-      return NextResponse.json({ error: "Authentication required." }, { status: 401 });
-    }
-    if (access.invalid) {
-      return NextResponse.json({ error: "Trip not found." }, { status: 404 });
-    }
-
-    let body;
-    try {
-      body = await request.json();
-    } catch {
-      return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
-    }
-    const name = typeof body?.name === "string" ? body.name.trim() : "";
-    if (!name || name.length > 100) {
-      return NextResponse.json(
-        { error: "Trip name must be between 1 and 100 characters." },
-        { status: 400 }
-      );
-    }
-
-    const trip = await Trip.findOneAndUpdate(
-      access.query,
-      { $set: { name } },
-      { new: true, runValidators: true }
-    ).lean();
-    if (!trip) return NextResponse.json({ error: "Trip not found." }, { status: 404 });
-    return NextResponse.json({ trip });
-  } catch (error) {
-    console.error("Rename trip error:", error);
-    return NextResponse.json({ error: "Unable to rename trip." }, { status: 500 });
-  }
-}
-
-export async function DELETE(_request, { params }) {
-  try {
-    const { id } = await params;
-    const access = await ownedTripQuery(id);
-    if (access.unauthorized) {
-      return NextResponse.json({ error: "Authentication required." }, { status: 401 });
-    }
-    if (access.invalid) {
-      return NextResponse.json({ error: "Trip not found." }, { status: 404 });
-    }
-
-    const trip = await Trip.findOneAndDelete(access.query).lean();
-    if (!trip) return NextResponse.json({ error: "Trip not found." }, { status: 404 });
-    return NextResponse.json({ message: "Trip deleted." });
-  } catch (error) {
-    console.error("Delete trip error:", error);
-    return NextResponse.json({ error: "Unable to delete trip." }, { status: 500 });
-  }
-}
+export const GET = apiHandler("trips.get", async (_request, { params }) => {
+  const query = await ownedTripQuery((await params).id);
+  const trip = await Trip.findOne(query).select("+shareTokenHash").lean();
+  if (!trip) throw new ApiError(404, "Trip not found.");
+  return json({ trip: ownerView(trip) });
+});
+export const PATCH = apiHandler("trips.update", async (request, { params }) => {
+  const query = await ownedTripQuery((await params).id);
+  await rateLimit(`update:${query.owner}`, 40);
+  const body = await readJson(request, updateTripSchema), changes = {}, update = {};
+  if (body.name !== undefined) changes.name = body.name;
+  if (body.itinerary) changes.itinerary = persistableItinerary(body.itinerary);
+  let token;
+  if (body.sharing === true) {
+    const created = newShareToken(); token = created.token; changes.shareTokenHash = created.hash;
+  } else if (body.sharing === false) update.$unset = { shareTokenHash: 1 };
+  if (Object.keys(changes).length) update.$set = changes;
+  const trip = await Trip.findOneAndUpdate(query, update, { new: true, runValidators: true }).select("+shareTokenHash").lean();
+  if (!trip) throw new ApiError(404, "Trip not found.");
+  return json({ trip: ownerView(trip), ...(token ? { shareToken: token } : {}) });
+});
+export const DELETE = apiHandler("trips.delete", async (_request, { params }) => {
+  const query = await ownedTripQuery((await params).id);
+  const trip = await Trip.findOneAndDelete(query).lean();
+  if (!trip) throw new ApiError(404, "Trip not found.");
+  return json({ message: "Trip deleted." });
+});

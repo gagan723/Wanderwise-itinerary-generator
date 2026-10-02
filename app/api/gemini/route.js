@@ -1,80 +1,35 @@
-// app/api/gemini/route.js
+import { askGemini, regenerateDay, replacementStops } from "@/lib/gemini";
+import { getCurrentUser } from "@/lib/currentUser";
+import { apiHandler, ApiError, json, readJson } from "@/lib/api";
+import { aiRequestSchema, itinerarySchema } from "@/lib/schemas";
+import { flattenDays, requestedDates, updateDay } from "@/lib/itinerary";
+import { verifyItinerary } from "@/lib/googleMaps";
+import { rateLimit } from "@/lib/rateLimit";
 
-import { askGemini } from '@/lib/gemini'; // Adjust this path if necessary based on your folder structure
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-
-export async function POST(request) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    if (!session) {
-      return new Response(JSON.stringify({ error: 'Authentication required.' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    const { userMessage, type, context } = await request.json();
-
-    if (!userMessage || !type) {
-      return new Response(JSON.stringify({ error: 'Missing userMessage or type in request body.' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    if (type === 'info') {
-      // Handle information gathering
-      const infoResponse = await askGemini({ userMessage, type: 'info', context: context });
-
-      // The infoResponse directly contains:
-      // {
-      //   status_message: "Ready to generate itinerary!" or "What's your destination?",
-      //   collected_details: { ... }, // This is the context you want the frontend to store
-      //   missing_fields: [...]
-      // }
-      
-      // Send back the info model's response directly
-      return new Response(JSON.stringify(infoResponse), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-    } else if (type === 'itinerary') {
-      // Handle itinerary generation
-      // The frontend should have sent the complete 'context' for itinerary generation
-      if (!context || Object.keys(context).length === 0) {
-          return new Response(JSON.stringify({ error: 'Context is required for itinerary generation.' }), {
-              status: 400,
-              headers: { 'Content-Type': 'application/json' },
-          });
-      }
-
-      const itineraryResult = await askGemini({
-        userMessage: userMessage, // Can be a generic trigger like "Generate the itinerary"
-        type: 'itinerary',
-        context: context // Pass the full collected context received from the frontend
-      });
-
-      // The itineraryResult should be the full JSON itinerary object directly from askGemini
-      return new Response(JSON.stringify(itineraryResult), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-    } else {
-      return new Response(JSON.stringify({ error: 'Invalid type specified.' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-  } catch (error) {
-    console.error('API Route Error:', error);
-    return new Response(JSON.stringify({ error: 'Internal Server Error', details: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+export const maxDuration = 300;
+export const POST = apiHandler("gemini", async (request) => {
+  const user = await getCurrentUser();
+  if (!user) throw new ApiError(401, "Authentication required.");
+  await rateLimit(`ai:${user._id}`, 12);
+  const body = await readJson(request, aiRequestSchema);
+  if (body.type === "info") return json(await askGemini(body));
+  if (body.type === "day") {
+    const original = flattenDays(body.itinerary).find((day) => day.day === body.day);
+    if (!original) throw new ApiError(400, "Day not found in this itinerary.");
+    const day = await regenerateDay(body.itinerary, original, original.city);
+    const single = { title: body.itinerary.title, dates: body.itinerary.dates, locations: [{ city: original.city, days: [day.day], itinerary: [day] }] };
+    const checked = await verifyItinerary(single, replacementStops);
+    const updated = updateDay(body.itinerary, body.day, () => checked.locations[0].itinerary[0]);
+    return json({ ...itinerarySchema.parse(updated), mapData: checked.mapData });
   }
-}
+  let result = await askGemini(body);
+  const dates = requestedDates(body.context);
+  const validDates = (plan) => {
+    const days = flattenDays(plan);
+    return days.length === dates.length && dates.every((date, i) => days[i]?.day === i + 1 && days[i]?.date === date);
+  };
+  if (!validDates(result)) result = await askGemini(body);
+  if (!validDates(result)) throw new ApiError(502, "The generated plan did not cover every requested date.");
+  result.preferences = body.context;
+  return json(await verifyItinerary(result, replacementStops));
+});

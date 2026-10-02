@@ -1,103 +1,105 @@
-# 🌍 WanderWise – AI-Powered Travel Itinerary Generator
+# WanderWise
 
-WanderWise is a full-stack web application that generates personalized travel itineraries (Travel plan) using Google's Gemini AI. Users can input travel details like destination, dates, preferences, and budget, and instantly receive structured, day-by-day plans with recommendations on attractions, accommodations, and more.
+Turn a conversation into a checked, editable travel itinerary with Google Maps, save it privately, and optionally share a read-only link.
 
-> ✨ Built with Next.js 13 (App Router), Google Gemini API, and MongoDB.
+## Stack and MVP scope
 
----
-## 🚀 Deployed link
-- https://wanderwise-itinerary-generator.vercel.app
+- Next.js 15 App Router, React 19, NextAuth, MongoDB/Mongoose.
+- Gemini structured JSON plus independent Zod validation.
+- Google **Places API (New)** Text Search for attraction matching, **Routes API** for travel estimates, and **Maps JavaScript API** for the interactive map. No Mapbox dependency or mixed map providers.
+- Conversational collection of destination, inclusive dates, travelers, budget, interests, pace, and walking/cycling/driving preference.
+- Numbered markers, day filters, color-coded daily routes, whole-trip overview, marker details, and automatic bounds.
+- Remove/reorder stops, change daily transport, regenerate just one day, and recalculate affected routes.
+- Private owner-scoped saved trips: save, rename, update, delete, and reopen.
+- Optional public read-only links using 256-bit random tokens; owners can replace or revoke links. Only a SHA-256 token hash is stored.
 
+The MVP caps each trip at **14 days, 12 stops per day, and 80 stops total**. It does not book travel, handle payments, or provide turn-by-turn navigation.
 
-## 🛠️ Tech Stack
+## Local setup
 
-| Tech               | Description                               |
-|--------------------|-------------------------------------------|
-| **Next.js 13**      | App Router, SSR, API Routes               |
-| **Tailwind CSS**    | Modern utility-first styling              |
-| **MongoDB**         | Itinerary and user data storage           |
-| **NextAuth.js**     | Authentication (Google + Email/Password) |
-| **Gemini API**      | AI itinerary generation                  |
-| **Vercel**          | Deployment                                |
+Use Node.js 22.12+ (Node 24 is used for local verification).
 
-
-### ✨ Features
-
-- 💬 **Interactive Chat Interface**  
-  A user-friendly chat window to communicate your travel desires.
-
-- 🧠 **AI-Powered Information Gathering**  
-  Intelligently extracts critical trip details (destination, dates, travelers) from your natural language input.
-
-- 🧩 **Contextual Understanding**  
-  Remembers previous conversation turns to build a comprehensive understanding of your trip requirements.
-
-- 📅 **Dynamic Itinerary Generation**  
-  Once all necessary details are collected, Gemini AI generates a structured, day-by-day itinerary.
-
-- 🗺️ **Multi-City Support**  
-  Capable of generating itineraries that span multiple cities within a single trip.
-
-- 🖥️📱 **Responsive Design**  
-  Optimized for a seamless experience on both desktop and mobile devices.
-
-- 🗓️ **Detailed Itinerary View**  
-  Presents accommodations, attractions, and daily descriptions in a clear, organized timeline.
-
----
-
-⚙️ Setup and Local Development
-Follow these steps to get WanderWise running on your local machine.
-
-Prerequisites
-Node.js (v18 or higher recommended)
-
-npm or Yarn
-
-A Google Cloud Project with the Gemini API enabled.
-
-A Google Generative AI API Key.
-
-### 1. Clone the Repository
- ```bash
-git clone https://github.com/yourusername/wanderwise.git
-cd wanderwise
+```sh
+npm install
 ```
-### 2. Install Dependencies on both frontend and backend
 
- ```bash
-  npm install
+Copy `.env.example` to `.env.local` and fill in the following values:
 
-```
-### 3. Create .env file in backend and add
+| Variable | Purpose |
+| --- | --- |
+| `NEXTAUTH_SECRET` | Strong random session-signing secret |
+| `NEXTAUTH_URL` | App origin, e.g. `http://localhost:3000` |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Google OAuth credentials; separate from Maps keys |
+| `MONGO` | MongoDB connection URI |
+| `GEMINI_API_KEY` | Server-only Gemini key |
+| `GEMINI_MODEL` | Optional model override, defaults to `gemini-2.5-flash` |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Browser Maps JavaScript key |
+| `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` | Google Map ID for Advanced Markers; `DEMO_MAP_ID` is used locally if omitted |
+| `GOOGLE_MAPS_SERVER_API_KEY` | Server-only Places and Routes key |
 
- ```bash
-NEXTAUTH_SECRET=your-secret
-GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-GEMINI_API_KEY=your-gemini-api-key
-MONGO=your-mongodb-uri
+In Google Cloud:
 
-```
-### 4. Then run backend and frontend server
+1. Enable billing and **Maps JavaScript API**, **Places API (New)**, and **Routes API**. The previous geocoding-only server-key restriction is insufficient.
+2. Restrict the browser key to Maps JavaScript API and your allowed website referrers, including localhost during development. Browser keys are intentionally public.
+3. Restrict the server key to Places API (New) and Routes API. Add server IP restrictions where hosting provides stable outbound addresses; do not apply browser referrer restrictions to this key. Never use this key in a `NEXT_PUBLIC_` variable.
+4. Configure Google OAuth callbacks, including `http://localhost:3000/api/auth/callback/google` and the equivalent production URL.
+5. Configure Google Cloud quotas and billing alerts for your project. Application limits do not replace provider quotas or a billing budget.
 
- ```bash
+```sh
 npm run dev
-
 ```
-Open http://localhost:3000 (or the port indicated in your terminal) in your browser to see the application.
 
-## Usage
+Open `http://localhost:3000`. Missing map credentials leave the itinerary usable with explicit unverified statuses and an unavailable-map state. Missing MongoDB or Gemini credentials prevent authenticated generation/persistence.
 
-Start Chatting: Begin by typing your travel preferences into the chat input. For example:
+## How verification works
 
-"Plan a solo adventure trip to Bali in August 2025, mid-range budget."
+Gemini suggests official attraction names and addresses; it never supplies coordinates. The server validates its JSON and exact date coverage, retrying incomplete coverage once. Each attraction is searched through Google Places. A match requires valid coordinates, a close name match, city context, and no permanently-closed status. Coarse administrative locations are rejected.
 
-"I want to visit Kyoto, Japan with 2 adults for 5 days in April 2026, interested in culture and food."
+Unmatched suggestions get one Gemini replacement attempt per affected day, within a bounded verification window. Replacements must pass the same Places checks. Remaining unmatched stops stay visibly unresolved and are excluded from routes. An API outage is reported as verification unavailable, rather than treated as evidence that a place does not exist. Conservative matching can leave genuine attractions unresolved, especially when names or city aliases differ.
 
-Provide Details: The AI assistant will ask clarifying questions if it needs more information (e.g., specific dates, number of travelers).
+Deterministic checks flag missing/request-mismatched dates, duplicate attractions, excessive stop counts for the selected pace, over three hours of travel, over ten hours of visits/travel, and substantial geographic backtracking using a nearest-neighbor comparison. These are advisory checks, not opening-hour validation or a guaranteed route optimizer. Removing/reordering/replacing a stop clears the original day's narrative to avoid stale descriptions.
 
-Itinerary Generation: Once all critical details are gathered, the assistant will indicate "Ready to generate itinerary!" and then proceed to generate a detailed plan.
+## Temporary provider data and sharing
 
-View Itinerary: The generated itinerary will appear in the right-hand panel, organized by day, showing accommodations, attractions, and a detailed description for each day.
+- Coordinates, normalized addresses, attribution, verification status, and routes stay in request/open-page memory. Responses use `Cache-Control: private, no-store`; no localStorage, persistent map cache, or provider response logging is used.
+- Every save/update projects itinerary data through a Zod whitelist. Google-derived fields, including nested coordinates and place IDs, are stripped. Only original/generated trip text and preferences are persisted. Reopening a trip rechecks locations.
+- Duplicate lookups reuse results within a verification request; edits reuse results in the currently open page. Unmounting the workspace discards that cache.
+- Public requests load the saved itinerary from the token on the server. Visitors cannot supply arbitrary stops or transport modes to the public mapping endpoints. No write endpoint accepts a sharing token as authorization.
+- Public responses exclude account/owner details; the itinerary and its saved preferences are visible to anyone with the link. Replacing or revoking a token prevents future access, but cannot erase copies already viewed by recipients.
+- Shared pages request no indexing and use a no-referrer policy. `/privacy` and `/terms` describe the application's data handling and link to Google's policies.
 
+## Reliability and security
+
+All private APIs authenticate server-side. Reads, writes, renames, sharing changes, and deletes filter by both trip ID and signed-in owner. The middleware is an additional page guard, not the authorization boundary.
+
+Requests use bounded JSON bodies and Zod validation. Google calls have timeouts and field masks. MongoDB-backed atomic fixed-window counters work across app instances: 12 AI requests/minute/user, 8 verification requests/minute/user or shared link, 60 private or 30 public route requests/minute, and an aggregate 240 Google server requests/minute. Save/update endpoints are also limited. A `Retry-After` header accompanies throttling. MongoDB must permit the application to create the RequestLimit collection and TTL index; the `_id` counter key provides atomic uniqueness. Database failures fail closed.
+
+API logs contain request IDs, route labels, response status, elapsed time, and error classes, without raw prompts, provider response bodies, keys, or sharing tokens. Forward these logs to your hosting platform's monitoring system. Configure your hosting access logs separately if they record full public-link URLs.
+
+## Verification
+
+```sh
+npm test
+npm run lint
+npm run build
+npm run test:e2e
+```
+
+Unit and API integration tests cover AI output validation, date coverage, edits, schedule checks, location matching/replacement/outages, transport modes, ownership, payload rejection, and share rotation/revocation. API tests execute the real route handlers and validation/access layers with mocked MongoDB/provider boundaries.
+
+Playwright tests use a dedicated localhost server on port 3100 and a signed test session. They exercise conversation → map → transport/editing → save → rename → reopen → share → revoke, plus mobile layout. Gemini, database HTTP responses, and Google Maps are mocked to avoid API charges. They do **not** establish that production Google keys, billing, OAuth, or MongoDB connectivity are correctly configured. The default browser is installed Chrome; set `PLAYWRIGHT_CHANNEL=msedge` to use Edge instead.
+
+Before deployment, run the same demo with your configured services and check provider quotas, OAuth callback URLs, the Map ID, MongoDB indexes, and production key restrictions. The generation route allows up to 300 seconds and mapping routes up to 180 seconds; hosting must support these request durations. Nothing is deployed by the test commands.
+
+## Demo
+
+Sign in and request an affordable art and food trip to Paris. Supply exact dates, two travelers, a balanced pace, and walking. Open Map & routes, change Day 2 to driving, remove/reorder a stop, save, rename in My Trips, reopen, enable sharing, and revoke the link.
+
+## Provider references
+
+- [Places Text Search](https://developers.google.com/maps/documentation/places/web-service/text-search)
+- [Routes API](https://developers.google.com/maps/documentation/routes/compute_route_directions)
+- [Places attribution and storage policies](https://developers.google.com/maps/documentation/places/web-service/policies)
+- [Google Maps key security](https://developers.google.com/maps/api-security-best-practices)
+
+Only claim measured latency, test coverage, usage, or traffic in a portfolio after collecting real measurements.

@@ -17,6 +17,7 @@ function ChatInput({ onSendMessage, isLoading }) {
   return (
     <div className="flex gap-2 border-t bg-white p-4">
       <input
+        aria-label="Trip preferences"
         value={message}
         onChange={(event) => setMessage(event.target.value)}
         onKeyDown={(event) => {
@@ -38,12 +39,12 @@ function ChatInput({ onSendMessage, isLoading }) {
 
 function ChatMessages({ messages, isLoading }) {
   return (
-    <div className="flex-1 space-y-4 overflow-y-auto p-4">
+    <div className="flex-1 space-y-4 overflow-y-auto p-4" role="log" aria-live="polite">
       {!messages.length && (
         <div className="mt-12 text-center text-gray-500">
           <Plane size={48} className="mx-auto mb-4 text-gray-300" />
           <h3 className="mb-2 text-lg font-medium">Start Planning Your Trip</h3>
-          <p>Let&apos;s craft an unforgettable journey. Share your destination, travel dates, number of travelers, travel style, and budget.</p>
+          <p>Share your destination, dates (up to 14 days), travelers, budget, interests, pace, and preferred transport.</p>
         </div>
       )}
       {messages.map((message, index) => (
@@ -72,11 +73,16 @@ export default function TripPlannerPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [savedTripId, setSavedTripId] = useState(null);
+  const [dirty, setDirty] = useState(false);
+  const [editingBusy, setEditingBusy] = useState(false);
+  const [retryMessage, setRetryMessage] = useState(null);
   const [conversationContext, setConversationContext] = useState({});
 
   const handleSendMessage = async (message) => {
+    if (isLoading || editingBusy || isSaving) return;
     setMessages((current) => [...current, { role: "user", content: message, timestamp: new Date().toISOString() }]);
     setIsLoading(true);
+    setRetryMessage(null);
     try {
       const infoResponse = await fetch("/api/gemini", {
         method: "POST",
@@ -95,7 +101,7 @@ export default function TripPlannerPage() {
         timestamp: new Date().toISOString(),
       }]);
 
-      if (infoData.status_message === "Ready to generate itinerary!") {
+      if (Array.isArray(infoData.missing_fields) && infoData.missing_fields.length === 0) {
         const itineraryResponse = await fetch("/api/gemini", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -105,8 +111,10 @@ export default function TripPlannerPage() {
         if (!itineraryResponse.ok) throw new Error(itineraryData.error || "Unable to generate itinerary.");
         setItinerary(itineraryData);
         setSavedTripId(null);
+        setDirty(true);
       }
     } catch (error) {
+      setRetryMessage(message);
       setMessages((current) => [...current, { role: "assistant", content: error.message || "Sorry, I encountered an error. Please try again.", timestamp: new Date().toISOString() }]);
     } finally {
       setIsLoading(false);
@@ -114,17 +122,18 @@ export default function TripPlannerPage() {
   };
 
   const saveTrip = async () => {
-    if (!itinerary || isSaving || savedTripId) return;
+    if (!itinerary || isSaving || editingBusy || isLoading) return;
     setIsSaving(true);
     try {
-      const response = await fetch("/api/trips", {
-        method: "POST",
+      const response = await fetch(savedTripId ? `/api/trips/${savedTripId}` : "/api/trips", {
+        method: savedTripId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ itinerary }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Unable to save trip.");
       setSavedTripId(data.trip._id);
+      setDirty(false);
       toast.success("Trip saved to My Trips");
     } catch (error) {
       toast.error(error.message);
@@ -144,24 +153,25 @@ export default function TripPlannerPage() {
           <Link href="/trips" className="whitespace-nowrap text-sm font-semibold text-blue-600 hover:text-blue-800">My Trips</Link>
         </div>
         <ChatMessages messages={messages} isLoading={isLoading} />
-        <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading} />
+        {retryMessage && <button onClick={() => handleSendMessage(retryMessage)} disabled={isLoading || editingBusy || isSaving} className="mx-4 mb-2 rounded-lg border px-4 py-2 text-sm font-semibold text-blue-700 disabled:opacity-50">Retry last request</button>}
+        <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading || editingBusy || isSaving} />
       </div>
 
       <div className="flex min-h-[42rem] flex-col bg-gray-50 lg:min-h-0 lg:w-1/2">
         {itinerary && (
           <div className="flex justify-end border-b bg-white px-4 py-2">
-            {savedTripId ? (
+            {savedTripId && !dirty ? (
               <Link href={`/trips/${savedTripId}`} className="flex items-center gap-2 rounded-lg bg-green-50 px-4 py-2 text-sm font-semibold text-green-700 hover:bg-green-100">
                 <Check size={16} /> Saved - View trip
               </Link>
             ) : (
-              <button onClick={saveTrip} disabled={isSaving} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
-                <Save size={16} /> {isSaving ? "Saving..." : "Save Trip"}
+              <button onClick={saveTrip} disabled={isSaving || isLoading || editingBusy} className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+                <Save size={16} /> {isSaving ? "Saving..." : savedTripId ? "Save changes" : "Save Trip"}
               </button>
             )}
           </div>
         )}
-        <div className="min-h-0 flex-1"><ItineraryWorkspace itinerary={itinerary} /></div>
+        <div className="min-h-0 flex-1"><ItineraryWorkspace itinerary={itinerary} disabled={isLoading || isSaving} onBusyChange={setEditingBusy} onChange={(updated) => { setItinerary(updated); setDirty(true); }} /></div>
       </div>
     </div>
   );

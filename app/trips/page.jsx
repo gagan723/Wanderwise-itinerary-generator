@@ -17,9 +17,11 @@ export default function MyTripsPage() {
   const [editingId, setEditingId] = useState(null);
   const [name, setName] = useState("");
   const [busyId, setBusyId] = useState(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let active = true;
+    setLoading(true); setError("");
     fetch("/api/trips")
       .then(async (response) => {
         const data = await response.json();
@@ -29,7 +31,7 @@ export default function MyTripsPage() {
       .catch((fetchError) => active && setError(fetchError.message))
       .finally(() => active && setLoading(false));
     return () => { active = false; };
-  }, []);
+  }, [attempt]);
 
   const renameTrip = async (trip) => {
     const trimmedName = name.trim();
@@ -90,6 +92,7 @@ export default function MyTripsPage() {
         {!loading && error && (
           <div className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center text-red-700">
             <p className="font-semibold">We couldn&apos;t load your trips.</p><p className="mt-1 text-sm">{error}</p>
+            <button onClick={() => setAttempt((value) => value + 1)} className="mt-4 rounded-lg border border-red-300 px-4 py-2 font-semibold">Retry</button>
           </div>
         )}
         {!loading && !error && !trips.length && (

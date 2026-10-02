@@ -24,7 +24,7 @@ const About = () => {
             
           </h2>
           <p className="text-gray-700 text-center text-sm md:text-base leading-relaxed">
-            WanderWise is your smart AI-powered travel assistant, crafting personalized itineraries tailored to your travel style, budget, and preferences—whether you're setting off on a solo adventure, a romantic getaway, or a family vacation. No more endless searching—just tell us where you want to go, and we'll handle the details, from flights and stays to must-see spots, dining options, and hidden gems. Travel planning made simple, intuitive, and fun.
+            WanderWise builds personalized itineraries around your travel style, budget, and interests. Plan a solo adventure, a couple&apos;s getaway, or a family vacation. Review attraction matches on Google Maps, compare daily routes, and save a trip you can revisit and share.
           </p>
 
           <button onClick={handleClick}  className="mt-6 px-6 py-3 bg-teal-600 text-white-50 text-lg font-medium  hover:bg-teal-700 transition">

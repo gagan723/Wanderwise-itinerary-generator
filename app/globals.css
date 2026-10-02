@@ -15,6 +15,9 @@ body {
   background-color: white;
 }
 
+:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+button:disabled { cursor: not-allowed; }
+
 .wanderwise-map-marker {
   width: 2rem;
   height: 2rem;

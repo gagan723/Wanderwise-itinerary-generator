@@ -18,11 +18,13 @@ const TripSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       required: true,
     },
+    shareTokenHash: { type: String, select: false },
   },
   { timestamps: true }
 );
 
 TripSchema.index({ owner: 1, updatedAt: -1 });
+TripSchema.index({ shareTokenHash: 1 }, { unique: true, sparse: true });
 
 const Trip = mongoose.models.Trip || mongoose.model("Trip", TripSchema);
 
