@@ -6,7 +6,7 @@ Turn a conversation into a checked, editable travel itinerary with Google Maps, 
 
 - Next.js 15 App Router, React 19, NextAuth, MongoDB/Mongoose.
 - Gemini structured JSON plus independent Zod validation.
-- Google **Places API (New)** Text Search for attraction matching, **Routes API** for travel estimates, and **Maps JavaScript API** for the interactive map. No Mapbox dependency or mixed map providers.
+- Google **Places API (New)** Text Search for verified attraction discovery, Place Details for saved-trip refreshes, **Routes API** for travel estimates, and **Maps JavaScript API** for the interactive map. No Mapbox dependency or mixed map providers.
 - Conversational collection of destination, inclusive dates, travelers, budget, interests, pace, and walking/cycling/driving preference.
 - Numbered markers, day filters, color-coded daily routes, whole-trip overview, marker details, and automatic bounds.
 - Remove/reorder stops, change daily transport, regenerate just one day, and recalculate affected routes.
@@ -53,20 +53,24 @@ Open `http://localhost:3000`. Missing map credentials leave the itinerary usable
 
 ## How verification works
 
-Gemini suggests official attraction names and addresses; it never supplies coordinates. The server validates its JSON and exact date coverage, retrying incomplete coverage once. Each attraction is searched through Google Places. A match requires valid coordinates, a close name match, city context, and no permanently-closed status. Coarse administrative locations are rejected.
+Gemini first creates the dated city-and-day outline without attractions. For each unique destination, the server makes one Google Places Text Search using the traveler's interests and requests at most 20 candidates. It makes exactly one complementary fallback search only when the first pool is smaller than the pace minimum: two places per relaxed day, three per balanced day, or four per busy day.
 
-Unmatched suggestions get one Gemini replacement attempt per affected day, within a bounded verification window. Replacements must pass the same Places checks. Remaining unmatched stops stay visibly unresolved and are excluded from routes. An API outage is reported as verification unavailable, rather than treated as evidence that a place does not exist. Conservative matching can leave genuine attractions unresolved, especially when names or city aliases differ.
+Closed places, administrative regions, duplicate Place IDs, and results without coordinates are removed. Gemini then selects only from those candidate IDs, and the server rejects invented or duplicate IDs. If the verified pool remains small, the plan uses lighter or rest days instead of unverified suggestions. A destination with no valid candidates returns a clear error. This limits new-trip discovery to at most two Text Search requests per destination and avoids a Text Search for every generated stop.
+
+Newly generated stops retain their Place IDs. Reopening a saved trip refreshes those exact IDs with Place Details; older trips without IDs retain the conservative name-and-city Text Search fallback. Removed, closed, or stale places remain visibly unresolved and are excluded from routes. Provider outages are reported as unavailable rather than treated as evidence that a place does not exist.
 
 Deterministic checks flag missing/request-mismatched dates, duplicate attractions, excessive stop counts for the selected pace, over three hours of travel, over ten hours of visits/travel, and substantial geographic backtracking using a nearest-neighbor comparison. These are advisory checks, not opening-hour validation or a guaranteed route optimizer. Removing/reordering/replacing a stop clears the original day's narrative to avoid stale descriptions.
 
 ## Temporary provider data and sharing
 
-- Coordinates, normalized addresses, attribution, verification status, and routes stay in request/open-page memory. Responses use `Cache-Control: private, no-store`; no localStorage, persistent map cache, or provider response logging is used.
-- Every save/update projects itinerary data through a Zod whitelist. Google-derived fields, including nested coordinates and place IDs, are stripped. Only original/generated trip text and preferences are persisted. Reopening a trip rechecks locations.
+- Coordinates, canonical Google addresses, attribution, verification status, discovery pools, and routes stay in request/open-page memory. Responses use `Cache-Control: private, no-store`; no localStorage, persistent map cache, or provider response logging is used.
+- Every save/update projects itinerary data through a Zod whitelist. Place IDs are persisted so saved trips can refresh the exact locations; all other Google-derived fields are stripped. Original/generated trip text and preferences are also persisted.
 - Duplicate lookups reuse results within a verification request; edits reuse results in the currently open page. Unmounting the workspace discards that cache.
 - Public requests load the saved itinerary from the token on the server. Visitors cannot supply arbitrary stops or transport modes to the public mapping endpoints. No write endpoint accepts a sharing token as authorization.
 - Public responses exclude account/owner details; the itinerary and its saved preferences are visible to anyone with the link. Replacing or revoking a token prevents future access, but cannot erase copies already viewed by recipients.
 - Shared pages request no indexing and use a no-referrer policy. `/privacy` and `/terms` describe the application's data handling and link to Google's policies.
+
+Configure Google Cloud quotas and billing alerts before production use. The application-level search cap bounds each generation request, but it does not replace provider quotas or billing controls.
 
 ## Reliability and security
 

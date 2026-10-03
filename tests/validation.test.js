@@ -8,13 +8,13 @@ describe("trip validation and persistence", () => {
     for (const values of [{ startDate: "2026-02-30" }, { endDate: "2026-10-31" }, { endDate: "2026-12-01" }]) expect(preferencesSchema.safeParse({ ...preferences, ...values }).success).toBe(false);
     expect(requestedDates(preferences)).toEqual(["2026-11-01", "2026-11-02"]);
   });
-  it("strips all temporary provider fields on every persistence level", () => {
+  it("persists Place IDs but strips all other temporary provider fields", () => {
     const value = tripFixture(); value.mapData = mappedFixture(); value.routes = { coordinates: [1, 2] };
     Object.assign(value.locations[0].itinerary[0].stops[0], { coordinates: [1, 2], resolvedAddress: "PROVIDER ADDRESS", placeId: "SECRET", status: "verified", attributions: ["DATA"] });
     const stored = persistableItinerary(value);
     expect(stored.mapData).toBeUndefined(); expect(stored.routes).toBeUndefined();
     expect(stored.locations[0].itinerary[0].stops[0]).not.toHaveProperty("coordinates");
-    expect(JSON.stringify(stored)).not.toContain("PROVIDER ADDRESS"); expect(JSON.stringify(stored)).not.toContain("SECRET");
+    expect(JSON.stringify(stored)).not.toContain("PROVIDER ADDRESS"); expect(stored.locations[0].itinerary[0].stops[0].placeId).toBe("SECRET");
   });
   it("supports old attraction-only saved plans but rejects duplicate days", () => {
     const value = tripFixture(); delete value.locations[0].itinerary[0].stops; value.locations[0].itinerary[0].attractions = ["Louvre Museum"];

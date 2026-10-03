@@ -2,13 +2,13 @@ export const preferences = { destination: "Paris, France", startDate: "2026-11-0
 export function tripFixture() {
   return { title: "Paris art and food", dates: "1–2 November 2026", preferences: { ...preferences }, locations: [{ city: "Paris, France", days: [1, 2], itinerary: [
     { day: 1, date: "2026-11-01", title: "Art by the river", description: "Explore Paris at your own pace.", transportMode: "walking", stops: [
-      { name: "Louvre Museum", address: "Rue de Rivoli, Paris", order: 1, estimatedVisitMinutes: 90, notes: "Book ahead" },
-      { name: "Tuileries Garden", address: "Paris, France", order: 2, estimatedVisitMinutes: 60, notes: "Take a stroll" },
-      { name: "Musée d’Orsay", address: "Paris, France", order: 3, estimatedVisitMinutes: 90, notes: "Art collections" },
+      { name: "Louvre Museum", address: "Rue de Rivoli, Paris", placeId: "place-louvre", order: 1, estimatedVisitMinutes: 90, notes: "Book ahead" },
+      { name: "Tuileries Garden", address: "Paris, France", placeId: "place-tuileries", order: 2, estimatedVisitMinutes: 60, notes: "Take a stroll" },
+      { name: "Musée d’Orsay", address: "Paris, France", placeId: "place-orsay", order: 3, estimatedVisitMinutes: 90, notes: "Art collections" },
     ] },
     { day: 2, date: "2026-11-02", title: "City landmarks", description: "Discover another side of the city.", transportMode: "walking", stops: [
-      { name: "Eiffel Tower", address: "Paris, France", order: 1, estimatedVisitMinutes: 60, notes: "Book ahead" },
-      { name: "Champ de Mars", address: "Paris, France", order: 2, estimatedVisitMinutes: 60, notes: "Relax outdoors" },
+      { name: "Eiffel Tower", address: "Paris, France", placeId: "place-eiffel", order: 1, estimatedVisitMinutes: 60, notes: "Book ahead" },
+      { name: "Champ de Mars", address: "Paris, France", placeId: "place-mars", order: 2, estimatedVisitMinutes: 60, notes: "Relax outdoors" },
     ] },
   ] }] };
 }

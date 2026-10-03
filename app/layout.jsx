@@ -23,7 +23,7 @@ export default function RootLayout({ children }) {
             {children}
           </SessionWrapper>
         </main>
-        <Toaster position="top-right"/>
+        <Toaster position="bottom-center"/>
         <Footer/>
       </body>
     </html>
