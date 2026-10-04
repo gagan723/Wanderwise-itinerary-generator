@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { List, Map as MapIcon } from "lucide-react";
+import { FileDown, List, Map as MapIcon } from "lucide-react";
 import ItineraryLayout from "@/components/ItineraryLayout";
+import TripPrintView from "@/components/TripPrintView";
 import { editStop, flattenDays, stopKey, updateDay, validateSchedule } from "@/lib/itinerary";
 import { persistableItinerary } from "@/lib/schemas";
 
@@ -92,6 +93,7 @@ export default function ItineraryWorkspace({ itinerary, onChange, shareToken, di
   return <div className="flex h-full min-h-0 flex-col">
     <div className="flex gap-2 border-b bg-white p-2" aria-label="Itinerary views">
       {[["itinerary", List, "Itinerary"], ["map", MapIcon, "Map & routes"]].map(([value, Icon, label]) => <button key={value} aria-pressed={view === value} onClick={() => setView(value)} className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold ${view === value ? "bg-blue-50 text-blue-700" : "text-slate-600"}`}><Icon size={16} />{label}</button>)}
+      <button type="button" onClick={() => window.print()} title="Export trip as PDF" aria-label="Export trip as PDF" className="flex items-center justify-center gap-2 rounded-lg border-l px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"><FileDown size={16} /><span className="hidden sm:inline">Export PDF</span></button>
     </div>
     <div className="border-b bg-white px-4 py-2 text-xs text-slate-600" aria-live="polite">
       {locating ? "Checking attractions with Google Maps…" : `${mappedDays.reduce((sum, day) => sum + day.stops.filter((stop) => stop.status === "verified").length, 0)} of ${days.reduce((sum, day) => sum + day.stops.length, 0)} stops matched on Google Maps`}
@@ -103,5 +105,6 @@ export default function ItineraryWorkspace({ itinerary, onChange, shareToken, di
       {view === "map" ? <ItineraryMap days={mappedDays} routes={routes} selectedDay={selectedDay} onSelectDay={setSelectedDay} onMode={changeMode} readOnly={readOnly} busy={busy} locating={locating} />
         : <ItineraryLayout itinerary={itinerary} mappedDays={mappedDays} routes={routes} issues={issues} onStop={changeStop} onMode={changeMode} onRegenerate={regenerate} readOnly={readOnly} busy={busy} regenerating={regenerating} />}
     </div>
+    <TripPrintView itinerary={itinerary} mappedDays={mappedDays} routes={routes} />
   </div>;
 }

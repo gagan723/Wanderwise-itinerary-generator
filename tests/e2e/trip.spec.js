@@ -118,3 +118,10 @@ test("mobile layout supports stop edits without horizontal overflow", async ({ p
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: test.info().outputPath("mobile-itinerary.png"), fullPage: true });
 });
+
+test("exports the current itinerary through the PDF print dialog", async ({ page, context }) => {
+  await setup(page, context); await generate(page);
+  await page.evaluate(() => { window.print = () => { window.__wanderwisePrinted = true; }; });
+  await page.getByRole("button", { name: "Export trip as PDF" }).click();
+  await expect.poll(() => page.evaluate(() => window.__wanderwisePrinted)).toBe(true);
+});

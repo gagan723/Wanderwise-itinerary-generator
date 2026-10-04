@@ -100,3 +100,206 @@ button:disabled { cursor: not-allowed; }
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
 }
+
+.trip-print-view {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: auto;
+    margin: 14mm 14mm 18mm;
+
+    @bottom-left {
+      content: "WanderWise";
+      color: #64748b;
+      font: 9pt Arial, sans-serif;
+    }
+
+    @bottom-right {
+      content: "Page " counter(page) " of " counter(pages);
+      color: #64748b;
+      font: 9pt Arial, sans-serif;
+    }
+  }
+
+  body {
+    background: white;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  .trip-print-view,
+  .trip-print-view * {
+    visibility: visible !important;
+  }
+
+  .trip-print-view {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: block;
+    width: 100%;
+    color: #172033;
+    font-family: Arial, sans-serif;
+    font-size: 10pt;
+    line-height: 1.45;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .trip-print-header {
+    border-bottom: 2px solid #1d4ed8;
+    padding-bottom: 8mm;
+  }
+
+  .trip-print-brand,
+  .trip-print-kicker {
+    color: #1d4ed8;
+    font-size: 8pt;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .trip-print-header h1 {
+    margin-top: 2mm;
+    color: #0f172a;
+    font-size: 24pt;
+    line-height: 1.1;
+  }
+
+  .trip-print-subtitle {
+    margin-top: 3mm;
+    font-size: 11pt;
+    font-weight: 700;
+  }
+
+  .trip-print-cities {
+    margin-top: 1mm;
+    color: #475569;
+  }
+
+  .trip-print-overview {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4mm;
+    margin: 7mm 0 8mm;
+    padding: 4mm 0;
+    border-bottom: 1px solid #cbd5e1;
+  }
+
+  .trip-print-overview dt {
+    color: #64748b;
+    font-size: 7.5pt;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  .trip-print-overview dd {
+    margin-top: 1mm;
+    font-weight: 700;
+  }
+
+  .trip-print-day {
+    margin-top: 8mm;
+  }
+
+  .trip-print-day-heading {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 8mm;
+    padding-bottom: 3mm;
+    border-bottom: 1px solid #cbd5e1;
+    break-after: avoid;
+  }
+
+  .trip-print-day-heading h2 {
+    margin-top: 1mm;
+    color: #0f172a;
+    font-size: 16pt;
+    line-height: 1.2;
+  }
+
+  .trip-print-transport {
+    padding: 1.5mm 3mm;
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    color: #1e40af;
+    font-size: 8pt;
+    font-weight: 700;
+  }
+
+  .trip-print-description {
+    margin-top: 3mm;
+    color: #475569;
+  }
+
+  .trip-print-route {
+    margin-top: 2mm;
+    color: #1e40af;
+    font-size: 9pt;
+    font-weight: 700;
+  }
+
+  .trip-print-stops {
+    display: grid;
+    gap: 3mm;
+    margin-top: 4mm;
+    list-style: none;
+  }
+
+  .trip-print-stops li {
+    display: grid;
+    grid-template-columns: 8mm 1fr;
+    gap: 3mm;
+    break-inside: avoid;
+  }
+
+  .trip-print-number {
+    display: grid;
+    width: 7mm;
+    height: 7mm;
+    place-items: center;
+    border-radius: 50%;
+    background: #1d4ed8;
+    color: white;
+    font-size: 8pt;
+    font-weight: 700;
+  }
+
+  .trip-print-stops h3 {
+    color: #0f172a;
+    font-size: 11pt;
+  }
+
+  .trip-print-address,
+  .trip-print-duration,
+  .trip-print-match {
+    margin-top: 0.5mm;
+    color: #475569;
+    font-size: 8.5pt;
+  }
+
+  .trip-print-match {
+    color: #047857;
+    font-weight: 700;
+  }
+
+  .trip-print-free-day {
+    margin-top: 4mm;
+    color: #64748b;
+    font-style: italic;
+  }
+
+  .trip-print-note {
+    margin-top: 10mm;
+    padding-top: 4mm;
+    border-top: 1px solid #cbd5e1;
+    color: #64748b;
+    font-size: 8pt;
+    break-inside: avoid;
+  }
+}
