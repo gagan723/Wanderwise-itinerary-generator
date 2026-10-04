@@ -97,6 +97,13 @@ const Navbar = () => {
 									{session.user?.email}
 								</p>
 							</div>
+							<Link
+								href="/trips"
+								onClick={() => setShowUserMenu(false)}
+								className="block w-full px-4 py-2 text-left text-sm text-gray-700 transition hover:bg-gray-50"
+							>
+								My Trips
+							</Link>
 							<button
 								onClick={handleSignOut}
 								className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition"
@@ -151,6 +158,13 @@ const Navbar = () => {
 							</p>
 						</div>
 					</div>
+					<Link
+						href="/trips"
+						onClick={() => setIsOpen(false)}
+						className="mb-3 flex w-full items-center justify-center rounded-full border border-slate-300 px-4 py-2 font-medium transition hover:border-teal-500 hover:bg-teal-500 hover:text-white"
+					>
+						My Trips
+					</Link>
 					<button
 						onClick={handleSignOut}
 						className="w-full border border-slate-300 rounded-full px-4 py-2 flex items-center justify-center gap-2 hover:bg-teal-500 hover:text-white hover:border-teal-500 transition font-medium"

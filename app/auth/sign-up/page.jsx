@@ -223,7 +223,7 @@ const SignUp = () => {
           <p className="mt-4 text-center text-sm text-gray-600">
             Already have an account?{" "}
             <span
-              onClick={() => router.push("/sign-in")}
+              onClick={() => router.push("/auth/sign-in")}
               className="text-blue-600 hover:underline cursor-pointer"
             >
               Sign in here

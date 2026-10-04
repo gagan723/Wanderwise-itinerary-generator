@@ -1,69 +1,51 @@
-// app/api/gemini/route.js
+import { askGemini, generateTripOutline, regenerateDayOutline, selectVerifiedItinerary } from "@/lib/gemini";
+import { getCurrentUser } from "@/lib/currentUser";
+import { apiHandler, ApiError, json, readJson } from "@/lib/api";
+import { aiRequestSchema, itinerarySchema } from "@/lib/schemas";
+import { flattenDays, requestedDates, updateDay } from "@/lib/itinerary";
+import { discoverPlaces, hydrateVerifiedItinerary } from "@/lib/googleMaps";
+import { rateLimit } from "@/lib/rateLimit";
 
-import { askGemini } from '@/lib/gemini'; // Adjust this path if necessary based on your folder structure
+export const maxDuration = 300;
 
-export async function POST(request) {
-  try {
-    const { userMessage, type, context } = await request.json();
-
-    if (!userMessage || !type) {
-      return new Response(JSON.stringify({ error: 'Missing userMessage or type in request body.' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    if (type === 'info') {
-      // Handle information gathering
-      const infoResponse = await askGemini({ userMessage, type: 'info', context: context });
-
-      // The infoResponse directly contains:
-      // {
-      //   status_message: "Ready to generate itinerary!" or "What's your destination?",
-      //   collected_details: { ... }, // This is the context you want the frontend to store
-      //   missing_fields: [...]
-      // }
-      
-      // Send back the info model's response directly
-      return new Response(JSON.stringify(infoResponse), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-    } else if (type === 'itinerary') {
-      // Handle itinerary generation
-      // The frontend should have sent the complete 'context' for itinerary generation
-      if (!context || Object.keys(context).length === 0) {
-          return new Response(JSON.stringify({ error: 'Context is required for itinerary generation.' }), {
-              status: 400,
-              headers: { 'Content-Type': 'application/json' },
-          });
-      }
-
-      const itineraryResult = await askGemini({
-        userMessage: userMessage, // Can be a generic trigger like "Generate the itinerary"
-        type: 'itinerary',
-        context: context // Pass the full collected context received from the frontend
-      });
-
-      // The itineraryResult should be the full JSON itinerary object directly from askGemini
-      return new Response(JSON.stringify(itineraryResult), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-    } else {
-      return new Response(JSON.stringify({ error: 'Invalid type specified.' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-  } catch (error) {
-    console.error('API Route Error:', error);
-    return new Response(JSON.stringify({ error: 'Internal Server Error', details: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+async function discoverForOutline(outline, preferences, excludedIds = []) {
+  const candidatesByCity = new Map();
+  const daysByCity = new Map();
+  for (const location of outline.locations) daysByCity.set(location.city, (daysByCity.get(location.city) || 0) + location.itinerary.length);
+  for (const [city, dayCount] of daysByCity) {
+    candidatesByCity.set(city, await discoverPlaces(city, preferences.interests, preferences.pace, dayCount, excludedIds));
   }
+  return candidatesByCity;
 }
+
+export const POST = apiHandler("gemini", async (request) => {
+  const user = await getCurrentUser();
+  if (!user) throw new ApiError(401, "Authentication required.");
+  await rateLimit(`ai:${user._id}`, 12);
+  const body = await readJson(request, aiRequestSchema);
+  if (body.type === "info") return json(await askGemini(body));
+  if (body.type === "day") {
+    const original = flattenDays(body.itinerary).find((day) => day.day === body.day);
+    if (!original) throw new ApiError(400, "Day not found in this itinerary.");
+    const day = await regenerateDayOutline(body.itinerary, original, original.city);
+    const outline = { title: body.itinerary.title, dates: body.itinerary.dates, locations: [{ city: original.city, days: [day.day], itinerary: [day] }] };
+    const excludedIds = flattenDays(body.itinerary).filter((entry) => entry.day !== body.day).flatMap((entry) => entry.stops.map((stop) => stop.placeId).filter(Boolean));
+    const candidates = await discoverForOutline(outline, body.itinerary.preferences || { interests: "popular attractions", pace: "balanced" }, excludedIds);
+    const selected = await selectVerifiedItinerary(outline, candidates, body.itinerary.preferences || {});
+    const checked = hydrateVerifiedItinerary(selected, candidates);
+    const updated = updateDay(body.itinerary, body.day, () => checked.locations[0].itinerary[0]);
+    return json({ ...itinerarySchema.parse(updated), mapData: checked.mapData });
+  }
+  let outline = await generateTripOutline(body.context);
+  const dates = requestedDates(body.context);
+  const validDates = (plan) => {
+    const days = flattenDays(plan);
+    return days.length === dates.length && dates.every((date, i) => days[i]?.day === i + 1 && days[i]?.date === date);
+  };
+  if (!validDates(outline)) outline = await generateTripOutline(body.context);
+  if (!validDates(outline)) throw new ApiError(502, "The generated plan did not cover every requested date.");
+  const candidates = await discoverForOutline(outline, body.context);
+  const result = await selectVerifiedItinerary(outline, candidates, body.context);
+  result.preferences = body.context;
+  return json(hydrateVerifiedItinerary(itinerarySchema.parse(result), candidates));
+});

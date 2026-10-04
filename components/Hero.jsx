@@ -63,7 +63,7 @@ const Hero = () => {
       {/* Content */}
       <div className="relative z-20 flex flex-col items-center justify-center h-full px-6 text-white-50  text-center">
         <h1 className=" text-4xl md:text-7xl font-bold mb-4 drop-shadow-2xl">
-            Hey, I'm Skye — your AI travel companion
+            Hey, I&apos;m Skye — your AI travel companion
         </h1>
         <p className=" text-xl font-semibold md:text-3xl max-w-3xl mb-8 drop-shadow-2xl">
           Let’s plan your dream trip. Describe what you want — from beach getaways to city escapes — and I’ll take care of the rest.
