@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Check, Plane, Save, Send } from "lucide-react";
 import toast from "react-hot-toast";
@@ -78,6 +78,23 @@ export default function TripPlannerPage() {
   const [retryMessage, setRetryMessage] = useState(null);
   const [conversationContext, setConversationContext] = useState({});
 
+  useEffect(() => {
+    if (!dirty) return;
+
+    const handleBeforeUnload = (event) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [dirty]);
+
+  const confirmDiscardChanges = (event) => {
+    if (!dirty || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (!window.confirm("You have unsaved trip changes. Leave without saving?")) event.preventDefault();
+  };
+
   const handleSendMessage = async (message) => {
     if (isLoading || editingBusy || isSaving) return;
     setMessages((current) => [...current, { role: "user", content: message, timestamp: new Date().toISOString() }]);
@@ -150,7 +167,7 @@ export default function TripPlannerPage() {
             <h2 className="text-xl font-semibold text-gray-900">Trip Planning Assistant</h2>
             <p className="text-sm text-gray-600">Let&apos;s plan your perfect trip together!</p>
           </div>
-          <Link href="/trips" className="whitespace-nowrap text-sm font-semibold text-blue-600 hover:text-blue-800">My Trips</Link>
+          <Link href="/trips" onClick={confirmDiscardChanges} className="whitespace-nowrap text-sm font-semibold text-blue-600 hover:text-blue-800">My Trips</Link>
         </div>
         <ChatMessages messages={messages} isLoading={isLoading} />
         {retryMessage && <button onClick={() => handleSendMessage(retryMessage)} disabled={isLoading || editingBusy || isSaving} className="mx-4 mb-2 rounded-lg border px-4 py-2 text-sm font-semibold text-blue-700 disabled:opacity-50">Retry last request</button>}
